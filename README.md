@@ -324,8 +324,8 @@ The reference portfolio this playbook was distilled from was verified as follows
 
 | Verified by running it | Not verified |
 |---|---|
-| All 9 exploits on baseline and fixed; patch matrix 9/9; 25 SSRF guard cases; 21 detection cases; 10 attack scenarios; 4 mutation suites (24 of 24 mutants killed); 14 gate unit tests; threat-model validation and staleness check; Mermaid rendering; `actionlint` on 5 workflows | Wazuh rules on a live manager (offline simulator only) |
-| Clean-directory unpack of the packaged archive, then `make test`, `make mutate` and the patch matrix | GitHub Actions actually running; the Docker image and compose stack (no container runtime available); Semgrep covers 6 of 9 findings by nature |
+| All 9 exploits on baseline and fixed; patch matrix 9/9; 25 SSRF guard cases; 21 detection cases; 10 attack scenarios; 4 mutation suites (24 of 24 mutants killed); 14 gate unit tests; threat-model validation and staleness check; `actionlint` and `yamllint` clean on all 5 workflows (re-verified 2026-11-11) | Wazuh rules on a live manager (offline simulator only) |
+| All 5 GitHub Actions workflows run green on GitHub; the pipeline image is built and trivy-scanned in CI (base-image CVEs waived, time-boxed, in `gate-policy.yml`); clean-directory unpack of the packaged archive, then `make test`, `make mutate` and the patch matrix | The Docker Compose `up`/`seed` stack (not yet run); local `mermaid-cli` rendering was not reproduced in this environment (diagrams render on GitHub and ship with `check_diagrams.sh`); Semgrep covers 6 of 9 findings by nature |
 | | **The prompts in this repository have not been replayed end to end from an empty directory.** They are a faithful distillation of the build that was done, with the lessons above folded in. Treat your first run as the test of the prompts, and fix them where it differs. |
 
 ## 11. Adapting it and using it in interviews
