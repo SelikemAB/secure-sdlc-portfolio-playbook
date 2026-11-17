@@ -7,6 +7,12 @@
   `docker-compose.yml` (read-only fs, `cap_drop: ALL`, `no-new-privileges`, tmpfs, healthcheck, env-supplied secret).
 - `policy/gate-policy.yml`: severity thresholds per tool, pinned checkov check ids that block (root container, exposed SSH) vs warn
   (unpinned tags), required reports list, waiver rules (owner, reason, expiry <= 90 days).
+  GOTCHA: trivy-image will flag CRITICAL/HIGH CVEs in the base image's OS packages (openssl, musl, zlib, sqlite), and the gate will
+  correctly fail closed. Do NOT reflexively bump the base tag - a newer tag often carries the same CVEs plus new ones from added
+  packages, so verify in CI that a bump actually reduces findings before relying on it. When no fixed base exists, this is what the
+  waiver mechanism is for: a time-boxed, owner-signed exception per CVE (justify a critical on its real condition, e.g. "32-bit-only
+  path, images run amd64"). That is the honest story an interviewer wants: the gate caught it, remediation was attempted, residual
+  risk was formally accepted with an expiry.
 - `tools/gate.py`: reads `reports/*.json` (semgrep, gitleaks, trivy-fs, trivy-image, checkov, exploit-regression, ssrf, detection)
   and prints a Markdown verdict. Exit 0 pass, 1 policy failure, 2 missing/unparseable required report. A skipped tool yields
   `PASS [INCOMPLETE: skipped ...; not equivalent to a full run]`, never a bare PASS. Expired waivers fail.

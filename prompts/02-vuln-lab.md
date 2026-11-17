@@ -44,6 +44,10 @@ helper into the fix that needs it so patches stay independent.
 `semgrep/payloop-php.yml`: custom taint-mode rules (request input to SQL, to filesystem, to HTTP client; md5/sha1 for passwords;
 hard-coded secret; error disclosure). They must fire on the baseline and stay silent on the fixed tree. State plainly that
 F2, F7 and F8 are logic flaws that static analysis cannot see; they were found by reading handlers against the threat model.
+GOTCHA (learned the hard way): semgrep's built-in ignore list excludes any `build/` directory, so scanning a fixed tree staged at
+`build/fixed` makes semgrep "Ran rules on 0 files" and exit 0 - a vacuous pass that would stay green even if the fix were still
+vulnerable. In the `sast` target, stage the fixed tree in a temp dir OUTSIDE `build/`, scan with `--json`, and assert BOTH zero
+findings AND a non-zero scanned-file count (see `scripts/check_sast_clean.py`). A test that cannot fail is not a test.
 
 ## 5. Detection as code
 - `detections/wazuh/payloop_rules.xml`: ids 110100 to 110199, JSON decoder, MITRE ids on every rule, levels that match impact.
@@ -53,6 +57,13 @@ F2, F7 and F8 are logic flaws that static analysis cannot see; they were found b
 - `tools/ruletest.py` with `lint`, `replay`, `suite`: an offline simulator of the rule subset used (decoded_as json, pcre2 fields,
   if_sid, frequency/timeframe, same_field, different_field, `$(field)` interpolation). Document its differences from the real engine.
   `wazuh-logtest` on a live manager stays the final authority (write `docs/WAZUH-VALIDATION.md` with the exact procedure).
+  GOTCHAS the offline simulator hides (both confirmed on a real Wazuh 4.12 manager, so bake them in from the start):
+  1. Reserved field names (`srcip`, `status`, `url`, `id`, `user`, `dstip`, ...) decode to Wazuh STATIC fields and CANNOT be matched
+     with `<field name="status">` - analysisd refuses to start ("Field 'status' is static"). Use the dedicated tag, e.g. `<status>`.
+  2. Frequency correlation on `srcip` must use `<same_source_ip />`, NOT `<same_field>srcip</same_field>`: `same_field` only correlates
+     DYNAMIC fields, so with a static srcip the frequency rules silently never fire (the base rule logs every event but the brute-force
+     rule stays dead). Keep `<same_field>` only for genuinely dynamic keys like `user` and `idem_key`. The offline simulator accepts
+     the wrong forms, so these bugs are invisible until you run `wazuh-logtest`. Validate on a real manager before claiming engine-verified.
 - `tests/detections.yml`: cases with `events`, `expect`, `expect_absent`, `min_level`, `max_level`. Include FALSE-POSITIVE CONTROLS
   (same wallet viewed 8 times is not enumeration; distinct idempotency keys are normal; an ordinary customer day stays <= level 5).
 - Replay REAL captured logs: run the exploit suite against baseline and against fixed, save both JSONL logs as samples, and assert
